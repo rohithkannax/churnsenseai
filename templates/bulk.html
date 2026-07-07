@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChurnSense AI - Bulk Prediction</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- Google Fonts for premium typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="stars"></div>
+    <div class="glowing-orb-1"></div>
+    <div class="glowing-orb-2"></div>
+
+    <header>
+        <div class="nav-container">
+            <div class="logo">
+                <span class="logo-accent">ChurnSense</span> AI
+            </div>
+            <nav>
+                <a href="{{ url_for('index') }}" class="nav-link">Single Predict</a>
+                <a href="{{ url_for('bulk_predict') }}" class="nav-link active">Bulk Predict</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <section class="hero-section">
+            <h1>Bulk Customer Churn Processing</h1>
+            <p class="subtitle">Upload a batch CSV file of customer records to process them all simultaneously and download prediction logs.</p>
+        </section>
+
+        {% if error_msg %}
+        <div class="alert-box error-alert">
+            <div class="alert-icon">⚠️</div>
+            <div class="alert-content">
+                <strong>Error:</strong> {{ error_msg }}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="bulk-layout">
+            <!-- Upload Card -->
+            <div class="card upload-card">
+                <div class="card-header">
+                    <h2>Upload CSV Dataset</h2>
+                    <p>Select a CSV file containing customer rows matching the Telco Churn features structure.</p>
+                </div>
+                
+                <form action="{{ url_for('bulk_predict') }}" method="POST" enctype="multipart/form-data" class="upload-form">
+                    <div class="dropzone-area">
+                        <div class="dropzone-icon">📁</div>
+                        <label for="csvFile" class="dropzone-label">Choose CSV File</label>
+                        <input type="file" id="csvFile" name="file" accept=".csv" required>
+                        <p class="file-name-display" id="file-name-text">No file chosen</p>
+                    </div>
+
+                    <div class="instruction-box">
+                        <h4>⚠️ Required File Headers Info:</h4>
+                        <p>The CSV must contain features such as: <em>tenure, MonthlyCharges, TotalCharges, Contract, InternetService, gender, PaymentMethod</em>, etc.</p>
+                    </div>
+
+                    <button type="submit" class="btn btn-upload">Process Batch and Predict</button>
+                </form>
+            </div>
+
+            <!-- Results Section (Rendered only when predictions exist) -->
+            {% if predictions_exist %}
+            <div class="card results-card">
+                <div class="card-header results-header-flex">
+                    <div>
+                        <h2>Batch Results Preview</h2>
+                        <p>Visual statistics and output preview for the uploaded file.</p>
+                    </div>
+                    <a href="{{ url_for('download') }}" class="btn btn-download">💾 Download Predictions CSV</a>
+                </div>
+
+                <!-- KPI stats container -->
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <span class="kpi-title">Total Records</span>
+                        <span class="kpi-value">{{ total_rows }}</span>
+                    </div>
+                    <div class="kpi-card churn-kpi">
+                        <span class="kpi-title">Predicted Churn</span>
+                        <span class="kpi-value">{{ churn_count }}</span>
+                    </div>
+                    <div class="kpi-card stay-kpi">
+                        <span class="kpi-title">Predicted Stay</span>
+                        <span class="kpi-value">{{ stay_count }}</span>
+                    </div>
+                    <div class="kpi-card rate-kpi">
+                        <span class="kpi-title">Churn Rate</span>
+                        <span class="kpi-value">{{ churn_rate }}%</span>
+                    </div>
+                </div>
+
+                {% if show_limited_warning %}
+                <div class="table-notice">
+                    💡 <strong>Preview Notice:</strong> Showing only the first 100 rows. Download the complete dataset to view all predictions.
+                </div>
+                {% endif %}
+
+                <!-- Preview Table Container -->
+                <div class="table-container">
+                    <table class="results-table">
+                        <thead>
+                            <tr>
+                                {% for col in table_columns %}
+                                <th>{{ col }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in table_preview %}
+                            <tr class="row-{{ 'churn' if row.Prediction == 'CHURN' else 'stay' }}">
+                                {% for col in table_columns %}
+                                <td>
+                                    {% if col == 'Prediction' %}
+                                        <span class="table-badge badge-{{ 'red' if row[col] == 'CHURN' else 'green' }}">
+                                            {{ row[col] }}
+                                        </span>
+                                    {% elif col == 'Churn Probability (%)' %}
+                                        <strong>{{ row[col] }}%</strong>
+                                    {% else %}
+                                        {{ row[col] }}
+                                    {% endif %}
+                                </td>
+                                {% endfor %}
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+            {% endif %}
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 ChurnSense AI. Designed as a college final-year project.</p>
+    </footer>
+
+    <script>
+        // Simple JS to display selected filename in the dropzone
+        const fileInput = document.getElementById('csvFile');
+        const fileNameText = document.getElementById('file-name-text');
+        
+        fileInput.addEventListener('change', function(e) {
+            if (fileInput.files.length > 0) {
+                fileNameText.textContent = fileInput.files[0].name;
+                fileNameText.classList.add('active-file');
+            } else {
+                fileNameText.textContent = "No file chosen";
+                fileNameText.classList.remove('active-file');
+            }
+        });
+    </script>
+</body>
+</html>

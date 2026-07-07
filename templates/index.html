@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChurnSense AI - Single Prediction</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- Google Fonts for premium typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="stars"></div>
+    <div class="glowing-orb-1"></div>
+    <div class="glowing-orb-2"></div>
+    
+    <header>
+        <div class="nav-container">
+            <div class="logo">
+                <span class="logo-accent">ChurnSense</span> AI
+            </div>
+            <nav>
+                <a href="{{ url_for('index') }}" class="nav-link active">Single Predict</a>
+                <a href="{{ url_for('bulk_predict') }}" class="nav-link">Bulk Predict</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main-container">
+        <section class="hero-section">
+            <h1>Predict Customer Churn with Machine Learning</h1>
+            <p class="subtitle">Enter customer details below to evaluate the probability of churn and view AI-driven recommendations.</p>
+        </section>
+
+        {% if error_msg %}
+        <div class="alert-box error-alert">
+            <div class="alert-icon">⚠️</div>
+            <div class="alert-content">
+                <strong>Error:</strong> {{ error_msg }}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if not model_loaded %}
+        <div class="alert-box warning-alert">
+            <div class="alert-icon">⚡</div>
+            <div class="alert-content">
+                <strong>Model Not Trained:</strong> The machine learning model is not yet compiled. 
+                Please run <code>python churn_model.py</code> in your project terminal to train the RandomForest classifier.
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="dashboard-grid">
+            <!-- Left Panel: Input Form -->
+            <div class="card form-card">
+                <div class="card-header">
+                    <h2>Customer Profile Input</h2>
+                    <p>Provide values for all 19 customer contract and service features.</p>
+                </div>
+                <form action="{{ url_for('predict') }}" method="POST">
+                    <div class="form-grid">
+                        
+                        <!-- Demographic info -->
+                        <div class="form-group">
+                            <label for="gender">Gender</label>
+                            <select id="gender" name="gender" required>
+                                <option value="Male" {% if form_data and form_data.gender == 'Male' %}selected{% endif %}>Male</option>
+                                <option value="Female" {% if form_data and form_data.gender == 'Female' %}selected{% endif %}>Female</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="SeniorCitizen">Senior Citizen</label>
+                            <select id="SeniorCitizen" name="SeniorCitizen" required>
+                                <option value="0" {% if form_data and form_data.SeniorCitizen == 0 %}selected{% endif %}>No</option>
+                                <option value="1" {% if form_data and form_data.SeniorCitizen == 1 %}selected{% endif %}>Yes</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="Partner">Partner</label>
+                            <select id="Partner" name="Partner" required>
+                                <option value="Yes" {% if form_data and form_data.Partner == 'Yes' %}selected{% endif %}>Yes</option>
+                                <option value="No" {% if form_data and form_data.Partner == 'No' %}selected{% endif %}>No</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="Dependents">Dependents</label>
+                            <select id="Dependents" name="Dependents" required>
+                                <option value="Yes" {% if form_data and form_data.Dependents == 'Yes' %}selected{% endif %}>Yes</option>
+                                <option value="No" {% if form_data and form_data.Dependents == 'No' %}selected{% endif %}>No</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="tenure">Tenure (Months)</label>
+                            <input type="number" id="tenure" name="tenure" min="0" max="72" value="{% if form_data %}{{ form_data.tenure }}{% else %}12{% endif %}" required>
+                        </div>
+
+                        <!-- Services info -->
+                        <div class="form-group">
+                            <label for="PhoneService">Phone Service</label>
+                            <select id="PhoneService" name="PhoneService" required>
+                                <option value="Yes" {% if form_data and form_data.PhoneService == 'Yes' %}selected{% endif %}>Yes</option>
+                                <option value="No" {% if form_data and form_data.PhoneService == 'No' %}selected{% endif %}>No</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="MultipleLines">Multiple Lines</label>
+                            <select id="MultipleLines" name="MultipleLines" required>
+                                <option value="No" {% if form_data and form_data.MultipleLines == 'No' %}selected{% endif %}>No</option>
+                                <option value="Yes" {% if form_data and form_data.MultipleLines == 'Yes' %}selected{% endif %}>Yes</option>
+                                <option value="No phone service" {% if form_data and form_data.MultipleLines == 'No phone service' %}selected{% endif %}>No phone service</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="InternetService">Internet Service</label>
+                            <select id="InternetService" name="InternetService" required>
+                                <option value="DSL" {% if form_data and form_data.InternetService == 'DSL' %}selected{% endif %}>DSL</option>
+                                <option value="Fiber optic" {% if form_data and form_data.InternetService == 'Fiber optic' %}selected{% endif %}>Fiber optic</option>
+                                <option value="No" {% if form_data and form_data.InternetService == 'No' %}selected{% endif %}>No</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="OnlineSecurity">Online Security</label>
+                            <select id="OnlineSecurity" name="OnlineSecurity" required>
+                                <option value="No" {% if form_data and form_data.OnlineSecurity == 'No' %}selected{% endif %}>No</option>
+                                <option value="Yes" {% if form_data and form_data.OnlineSecurity == 'Yes' %}selected{% endif %}>Yes</option>
+                                <option value="No internet service" {% if form_data and form_data.OnlineSecurity == 'No internet service' %}selected{% endif %}>No internet service</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="OnlineBackup">Online Backup</label>
+                            <select id="OnlineBackup" name="OnlineBackup" required>
+                                <option value="No" {% if form_data and form_data.OnlineBackup == 'No' %}selected{% endif %}>No</option>
+                                <option value="Yes" {% if form_data and form_data.OnlineBackup == 'Yes' %}selected{% endif %}>Yes</option>
+                                <option value="No internet service" {% if form_data and form_data.OnlineBackup == 'No internet service' %}selected{% endif %}>No internet service</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="DeviceProtection">Device Protection</label>
+                            <select id="DeviceProtection" name="DeviceProtection" required>
+                                <option value="No" {% if form_data and form_data.DeviceProtection == 'No' %}selected{% endif %}>No</option>
+                                <option value="Yes" {% if form_data and form_data.DeviceProtection == 'Yes' %}selected{% endif %}>Yes</option>
+                                <option value="No internet service" {% if form_data and form_data.DeviceProtection == 'No internet service' %}selected{% endif %}>No internet service</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="TechSupport">Tech Support</label>
+                            <select id="TechSupport" name="TechSupport" required>
+                                <option value="No" {% if form_data and form_data.TechSupport == 'No' %}selected{% endif %}>No</option>
+                                <option value="Yes" {% if form_data and form_data.TechSupport == 'Yes' %}selected{% endif %}>Yes</option>
+                                <option value="No internet service" {% if form_data and form_data.TechSupport == 'No internet service' %}selected{% endif %}>No internet service</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="StreamingTV">Streaming TV</label>
+                            <select id="StreamingTV" name="StreamingTV" required>
+                                <option value="No" {% if form_data and form_data.StreamingTV == 'No' %}selected{% endif %}>No</option>
+                                <option value="Yes" {% if form_data and form_data.StreamingTV == 'Yes' %}selected{% endif %}>Yes</option>
+                                <option value="No internet service" {% if form_data and form_data.StreamingTV == 'No internet service' %}selected{% endif %}>No internet service</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="StreamingMovies">Streaming Movies</label>
+                            <select id="StreamingMovies" name="StreamingMovies" required>
+                                <option value="No" {% if form_data and form_data.StreamingMovies == 'No' %}selected{% endif %}>No</option>
+                                <option value="Yes" {% if form_data and form_data.StreamingMovies == 'Yes' %}selected{% endif %}>Yes</option>
+                                <option value="No internet service" {% if form_data and form_data.StreamingMovies == 'No internet service' %}selected{% endif %}>No internet service</option>
+                            </select>
+                        </div>
+
+                        <!-- Billing and Contract -->
+                        <div class="form-group">
+                            <label for="Contract">Contract Type</label>
+                            <select id="Contract" name="Contract" required>
+                                <option value="Month-to-month" {% if form_data and form_data.Contract == 'Month-to-month' %}selected{% endif %}>Month-to-month</option>
+                                <option value="One year" {% if form_data and form_data.Contract == 'One year' %}selected{% endif %}>One year</option>
+                                <option value="Two year" {% if form_data and form_data.Contract == 'Two year' %}selected{% endif %}>Two year</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="PaperlessBilling">Paperless Billing</label>
+                            <select id="PaperlessBilling" name="PaperlessBilling" required>
+                                <option value="Yes" {% if form_data and form_data.PaperlessBilling == 'Yes' %}selected{% endif %}>Yes</option>
+                                <option value="No" {% if form_data and form_data.PaperlessBilling == 'No' %}selected{% endif %}>No</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label for="PaymentMethod">Payment Method</label>
+                            <select id="PaymentMethod" name="PaymentMethod" required>
+                                <option value="Electronic check" {% if form_data and form_data.PaymentMethod == 'Electronic check' %}selected{% endif %}>Electronic check</option>
+                                <option value="Mailed check" {% if form_data and form_data.PaymentMethod == 'Mailed check' %}selected{% endif %}>Mailed check</option>
+                                <option value="Bank transfer (automatic)" {% if form_data and form_data.PaymentMethod == 'Bank transfer (automatic)' %}selected{% endif %}>Bank transfer (automatic)</option>
+                                <option value="Credit card (automatic)" {% if form_data and form_data.PaymentMethod == 'Credit card (automatic)' %}selected{% endif %}>Credit card (automatic)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="MonthlyCharges">Monthly Charges ($)</label>
+                            <input type="number" id="MonthlyCharges" name="MonthlyCharges" step="0.01" min="0" value="{% if form_data %}{{ form_data.MonthlyCharges }}{% else %}70.00{% endif %}" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="TotalCharges">Total Charges ($)</label>
+                            <input type="number" id="TotalCharges" name="TotalCharges" step="0.01" min="0" value="{% if form_data %}{{ form_data.TotalCharges }}{% else %}840.00{% endif %}" required>
+                        </div>
+
+                    </div>
+                    <button type="submit" class="btn btn-predict" {% if not model_loaded %}disabled{% endif %}>Analyze Churn Risk</button>
+                </form>
+            </div>
+
+            <!-- Right Panel: Results View (if predicted) or Instructions -->
+            <div class="card result-card">
+                {% if result %}
+                <div class="card-header">
+                    <h2>Analysis Summary</h2>
+                    <p>Machine Learning classification results for this customer profile.</p>
+                </div>
+                
+                <div class="result-display">
+                    <!-- Status Badge -->
+                    <div class="badge-container">
+                        <span class="result-badge badge-{{ color }}">
+                            Customer will {{ result }}
+                        </span>
+                    </div>
+
+                    <!-- Probability Display -->
+                    <div class="probability-section">
+                        <div class="probability-header">
+                            <span>Churn Probability:</span>
+                            <span class="probability-val text-{{ color }}">{{ probability }}</span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar-fill progress-fill-{{ color }}" style="width: {{ probability }}"></div>
+                        </div>
+                    </div>
+
+                    <!-- AI Explanation Section -->
+                    <div class="reason-section">
+                        <h3>AI Risk Assessment</h3>
+                        <p class="reason-text">{{ reason }}</p>
+                    </div>
+
+                    <!-- Mini feature importance table -->
+                    <div class="importance-section">
+                        <h3>Top 5 Driving Model Features</h3>
+                        <p class="section-help">Relative weight of features influencing the global RandomForest Classifier:</p>
+                        <div class="importance-list">
+                            {% for feature in top_features %}
+                            <div class="importance-row">
+                                <div class="feature-label">
+                                    <span class="feature-name">{{ feature.name }}</span>
+                                    <span class="feature-value">{{ feature.importance }}%</span>
+                                </div>
+                                <div class="mini-progress">
+                                    <div class="mini-progress-fill" style="width: {{ feature.importance }}%"></div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                </div>
+                {% else %}
+                <div class="empty-result">
+                    <div class="empty-icon">📊</div>
+                    <h3>Awaiting Customer Input</h3>
+                    <p>Fill out the profile form on the left and click <strong>Analyze Churn Risk</strong> to run predictions and view analytical metrics.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 ChurnSense AI. Designed as a college final-year project.</p>
+    </footer>
+</body>
+</html>

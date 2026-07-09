@@ -1,4 +1,5 @@
 import os
+import tempfile
 import pandas as pd
 import joblib
 from flask import Flask, request, render_template, send_file, redirect, url_for, flash
@@ -9,7 +10,7 @@ app.secret_key = "churnsense_secret_key"
 # Paths
 MODEL_PATH = "model.pkl"
 COLUMNS_PATH = "model_columns.pkl"
-PREDICTIONS_OUTPUT = "predictions_output.csv"
+PREDICTIONS_OUTPUT = os.path.join(tempfile.gettempdir(), "predictions_output.csv")
 
 model = None
 model_columns = None
@@ -207,9 +208,8 @@ def bulk_predict():
         df_output["Prediction"] = ["CHURN" if p == 1 else "STAY" for p in preds]
         df_output["Churn Probability (%)"] = [round(float(pr) * 100, 2) for pr in probs]
 
-        # Save to predictions_output.csv for download
-        predictions_csv_path = os.path.join(os.getcwd(), PREDICTIONS_OUTPUT)
-        df_output.to_csv(predictions_csv_path, index=False)
+        # Save to predictions_output.csv for download (using temp directory for cloud compatibility)
+        df_output.to_csv(PREDICTIONS_OUTPUT, index=False)
 
         # Calculate summary statistics
         total_rows = len(df_output)
@@ -240,10 +240,9 @@ def bulk_predict():
 
 @app.route("/download", methods=["GET"])
 def download():
-    predictions_csv_path = os.path.join(os.getcwd(), PREDICTIONS_OUTPUT)
-    if os.path.exists(predictions_csv_path):
+    if os.path.exists(PREDICTIONS_OUTPUT):
         return send_file(
-            predictions_csv_path,
+            PREDICTIONS_OUTPUT,
             mimetype="text/csv",
             as_attachment=True,
             download_name="churn_predictions.csv"

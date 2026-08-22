@@ -22,4 +22,4 @@ The model is trained on the **IBM Telco Customer Churn dataset** and achieves ap
 
 This project demonstrates the complete machine learning workflow, from data preprocessing and feature engineering to model training, evaluation, prediction, and deployment through a web application.
 
-**Developed by Rohit Kanna | Data Science Student**
+**Developed by Rohith Kanna | Data Science Student**
